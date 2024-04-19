@@ -1,5 +1,4 @@
 package org.example;
-
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
@@ -8,17 +7,20 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Base64;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
 
 public class StringEncryptor {
     private static final byte[] iv = {-126, -30, -6, -75, -99, -117, -66, 117, 39, -65, -126, -27, -12, 38, -99, 86};
     private static final byte[] salt = {-92, -102, -105, -123, 71, -33, 69, -39, -27, -32, 21, 33, 126, -81, 69, 59, 57, 29, -83, -15};
 
-    private String ANDROID_ID = "";
+    private String ANDROID_ID = null;
     private int PSM_UID = 0;
 
     StringEncryptor(String androidId, int psmUid){
         ANDROID_ID = androidId;
-        psmUid = psmUid;
+        PSM_UID = psmUid;
+        Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
     private String getAndroidId(){
@@ -49,11 +51,14 @@ public class StringEncryptor {
 
     private byte[] encrypt(byte[] input){
         try {
-            Cipher cipher =generateKeyCipher(StringEncryptor.salt, StringEncryptor.iv, Cipher.ENCRYPT_MODE);
+            Cipher cipher = generateKeyCipher(StringEncryptor.salt, StringEncryptor.iv, Cipher.ENCRYPT_MODE);
             if (cipher != null) {
                 return cipher.doFinal(input);
             }
-        } catch (BadPaddingException | IllegalBlockSizeException e) { }
+            else {
+                System.out.println("cipher was null");
+            }
+        } catch (BadPaddingException | IllegalBlockSizeException e) { System.out.println(e.toString()) ;}
         return null;
 
     }
@@ -75,18 +80,23 @@ public class StringEncryptor {
             return newCipher;
         }
         catch (NoSuchPaddingException ex) {
+            System.out.println(ex.toString());
             return null;
         }
         catch (InvalidAlgorithmParameterException ex2) {
+            System.out.println(ex2.toString());
             return null;
         }
         catch (InvalidKeyException ex3) {
+            System.out.println(ex3.toString());
             return null;
         }
         catch (InvalidKeySpecException ex4) {
+            System.out.println(ex4.toString());
             return null;
         }
         catch (NoSuchAlgorithmException ex5) {
+            System.out.println(ex5.toString());
             return null;
         }
     }
