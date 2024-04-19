@@ -1,95 +1,48 @@
 package org.example;
 
-import javax.crypto.*;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
-import java.util.Base64;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 public class Main {
-    private static final byte[] iv = {-126, -30, -6, -75, -99, -117, -66, 117, 39, -65, -126, -27, -12, 38, -99, 86};
-    private static final byte[] salt = {-92, -102, -105, -123, 71, -33, 69, -39, -27, -32, 21, 33, 126, -81, 69, 59, 57, 29, -83, -15};
+
+    public static void WriteTxtFile(String txtFile, String txt){
+        try {
+            System.out.println("Writing: "+txtFile);
+            FileWriter txtStream = new FileWriter(txtFile);
+            txtStream.write(txt);
+            txtStream.close();
+        } catch (IOException e) {
+            System.out.println("Failed to write file" + txtFile);
+        }
+
+    }
+
     public static void main(String[] args) {
         Security.addProvider(new BouncyCastleProvider());
 
-        System.out.println("usrename: "+encryptString("transrights@transgender.lgbt"));
-        System.out.println("password: "+encryptString("Trans Rights are Human Rights"));
-        System.out.println("accountId: "+encryptString("-6148914691236517206"));
-    }
-
-    private static String getAndroidId(){
-        return "a256d883de6fe05a";
-        //return Settings.Secure.getString(this.ctx.getContentResolver(), "android_id");;
-    }
-
-    private static int getPsmUid() {
-        return 10123;
-    }
-    private static String base64(byte[] data){
-        byte[] base64 = Base64.getEncoder().encode(data);
-        return new String(base64);
-    }
-    private static String encryptString(String str) {
-        byte[] data = str.getBytes();
-        byte[] encryptedData = encrypt(data);
-        if(encryptedData != null){
-            byte[] encodedData = Arrays.copyOf(encryptedData, encryptedData.length + 2);
-            encodedData[encodedData.length - 2] = 1;
-            encodedData[encodedData.length - 1] = 1;
-
-            return base64(encodedData);
+        if(args.length < 4) {
+            System.out.println("Usage: <android_id> <psm.apk uid> <email address> <password> <account_id>");
+            return;
         }
-        return "";
-    }
 
 
-    private static byte[] encrypt(byte[] input){
-        try {
-            Cipher cipher =generateKeyCipher(Main.salt, Main.iv, Cipher.ENCRYPT_MODE);
-            if (cipher != null) {
-                return cipher.doFinal(input);
-            }
-        } catch (BadPaddingException | IllegalBlockSizeException e) { }
-        return null;
+        StringEncryptor stringEncryptor = new StringEncryptor(args[0], Integer.parseInt(args[1]));
+        String emailAddress = args[2];
+        String password = args[3];
+        long accountId = Long.parseLong(args[4], 16);
+
+        new File("shared_prefs").mkdirs();
+        WriteTxtFile("shared_prefs/SigninInfo.xml", "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n<string name=\"SignedInUsername\">"+stringEncryptor.encryptString(emailAddress)+"\n</string>\n<boolean name=\"PassSave\" value=\"true\" />\n<string name=\"Password\">"+stringEncryptor.encryptString(password)+"\n</string>\n<boolean name=\"AutoSignIn\" value=\"true\" />\n</map>\n");
+        WriteTxtFile("shared_prefs/com.playstation.psstore_preferences.xml", "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n<boolean name=\"key_upgradeDownloadTableForNeedWifi\" value=\"true\" />\n<string name=\"last_signin_account_id\">"+stringEncryptor.encryptString(String.valueOf(accountId)) +"\n</string>\n<long name=\"last_signin_account_region\" value=\"2\" />\n<int name=\"key_psstore\" value=\"1\" />\n<int name=\"key_downloader\" value=\"1\" />\n<int name=\"psm_license_agree_version_code\" value=\"1170\" />\n<boolean name=\"key_notDisplayAgainEndOfSupportPreNavi\" value=\"true\" />\n<int name=\"key_xmlcache\" value=\"1\" />\n<string name=\"last_signin_account_country\">US</string>\n<boolean name=\"key_notDisplayAgainContentStartNavi\" value=\"true\" />\n<int name=\"key_startcontent\" value=\"1\" />\n<int name=\"key_nsxevent\" value=\"1\" />\n<boolean name=\"key_upgradeLibraryTableForLocationUseConfirmationDate\" value=\"true\" />\n<int name=\"key_install\" value=\"1\" />\n<string name=\"update_md5\">387ce7e424258aef426aaa5be8a1638a</string>\n<boolean name=\"psm_license_agree\" value=\"true\" />\n<int name=\"key_guestinfo\" value=\"1\" />\n<string name=\"last_signin_account_language\">en</string>\n<int name=\"key_cache\" value=\"2\" />\n<int name=\"key_signinfo\" value=\"2\" />\n</map>\n");
+        WriteTxtFile("shared_prefs/RunningContentInfo.xml", "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n<null name=\"title_id\" />\n<null name=\"next_title_id\" />\n</map>\n");
+        WriteTxtFile("shared_prefs/LocalLibrary.xml", "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n<boolean name=\"notDisplayAgain\" value=\"true\" />\n<int name=\"sortType\" value=\"0\" />\n<boolean name=\"isList\" value=\"false\" />\n</map>\n");
 
     }
 
-    private static Cipher generateKeyCipher(final byte[] salt, final byte[] iv, final int opmode) {
-        try {
-            final String androidId = getAndroidId();
-            final String psmUid = String.valueOf(getPsmUid());
-            if (androidId == null || psmUid == null) {
-                throw new InvalidParameterException();
-            }
-            final SecretKeyFactory skeyFactory = SecretKeyFactory.getInstance("PBEWITHSHAAND256BITAES-CBC-BC");
-            final char[] charArray = (androidId + psmUid + "     com.playstation.psstore    ").toCharArray();
-            final PBEKeySpec keySpec = new PBEKeySpec(charArray, salt, 16, 256);
-            Arrays.fill(charArray, '\0');
-            final SecretKeySpec key = new SecretKeySpec(skeyFactory.generateSecret(keySpec).getEncoded(), "AES");
-            final Cipher newCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            newCipher.init(opmode, key, new IvParameterSpec(iv), new SecureRandom());
-            return newCipher;
-        }
-        catch (NoSuchPaddingException ex) {
-            return null;
-        }
-        catch (InvalidAlgorithmParameterException ex2) {
-            return null;
-        }
-        catch (InvalidKeyException ex3) {
-            return null;
-        }
-        catch (InvalidKeySpecException ex4) {
-            return null;
-        }
-        catch (NoSuchAlgorithmException ex5) {
-            return null;
-        }
-    }
+
 }
 
